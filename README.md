@@ -1,20 +1,17 @@
 # Time-aware Ancient Text Translation and Inference
 This repository containts code and data for the paper "Time-Aware Ancient Chinese Text Translation and Inference" (LChange'21).
 If you use any resources here, please cite our paper as follows:
-> Ernie Chang, Yow-Ting Shiue, Hui-Syuan Yeh and Vera Demberg. Time-Aware Ancient Chinese Text Translation and Inference. *Proceedings of the 2nd International Workshop on Computational Approaches to Historical Language Change (LChange'21)*.
+> Ernie Chang, Yow-Ting Shiue, Hui-Syuan Yeh and Vera Demberg. 2021. [Time-Aware Ancient Chinese Text Translation and Inference](https://arxiv.org/abs/2107.03179). *arXiv preprint arXiv:1712.05690*.
 ```
-TODO
-@inproceedings{chang-etal-2021-time-aware,
-    title = "Time-Aware Ancient Chinese Text Translation and Inference",
-    author = "Chang, Ernie  and
-      Shiue, Yow-Ting  and
-      Yeh, Hui-Syuan  and
-      Demberg, Vera",
-    booktitle = "Proceedings of the 2nd International Workshop on Computational Approaches to Historical Language Change",
-    year = "2021",
-    publisher = "Association for Computational Linguistics",
+@article{chang2021timeaware,
+      title={Time-Aware Ancient Chinese Text Translation and Inference}, 
+      author={Ernie Chang and Yow-Ting Shiue and Hui-Syuan Yeh and Vera Demberg},
+      journal={arXiv preprint arXiv:2107.03179},
+      year={2021}
 }
 ```
+Accepted by the 2nd International Workshop on Computational Approaches to Historical Language Change (LChange'21).
+
 ## Data
 The train/development/test sets used in our ancient Chinese experiments can be found in the `data/` directory. Each CSV file has the following columns:
 * `time`: the historic time period of the sentence in the `sent_src` column. In this dataset, the value is one of `pre-qin`(先秦), `han`(漢) and `song`(宋).
@@ -54,5 +51,10 @@ test.zh_m
 ```
 Additional monolingual ancient/modern sentences can be added to the source/target side. In our experiments, we used the same nonparallel data as [Liu et al., 2019](https://dl.acm.org/doi/abs/10.1145/3325887).
 
-### Chronology Inference with Larget-scale LM
+### Chronology Inference with Large-scale LM
+
+#### Prepare Chronologically-annotated Data for Fine-tuning GPT-2
+#TODO
+
+#### Rerank Translation Candidates with GPT-2
 #TODO
