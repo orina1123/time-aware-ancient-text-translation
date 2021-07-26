@@ -39,8 +39,7 @@ python build_tokenized_parallel_files.py zh_a-zh_m.train.csv train
 python build_tokenized_parallel_files.py zh_a-zh_m.dev.csv dev
 python build_tokenized_parallel_files.py zh_a-zh_m.test.csv test
 ```
-The last two columns of `zh_a-zh_m.{train,dev,test}.csv`, `sent_src` and `sent_tgt`, should contain the ancient Chinese setences and the corresponding modern Chinese translations repectively.
-The above commands will produce the following files that can be taken by `fairseq-preprocess` as input:
+In `zh_a-zh_m.{train,dev,test}.csv`, the last two columns `sent_src` and `sent_tgt` should contain the ancient Chinese setences and the corresponding modern Chinese translations repectively. The above commands will produce the following files that can be taken by `fairseq-preprocess` as input:
 ```
 train.zh_a
 train.zh_m
@@ -60,8 +59,7 @@ The following command converts a CSV file with chronologically-annotated sentenc
 python build_zh_a-zh_m-chron_json.py /path/to/input.csv /path/to/output.json
 ```
 * `input.csv` is the train/development CSV file with columns `time`, `sent_src` and `sent_tgt`.
-* `output.json` will be in the format that can be taken by `GPT2-Chinese/train.py`. Each training instance is a string 
-`[zh_a] sent_src [zh_m] sent_tgt [chron] time`.
+* `output.json` will be in the format that can be taken by `GPT2-Chinese/train.py`. The JSON object will be a list of training instances, each of which is a string `[zh_a] sent_src [zh_m] sent_tgt [chron] time`.
 
 Example:
 ```
@@ -71,4 +69,38 @@ python build_zh_a-zh_m-chron_json.py zh_a-zh_m.profile.dev.csv ancient-modern-ti
 The above commands produce the train and development JSON files that can be passed as the value of the `--raw_data_path` argument of the `GPT2-Chinese` training scripts.
 
 #### Rerank Translation Candidates with GPT-2
-#TODO
+First, generate n-best translation candidates with `fairseq-generate`. Then, use the following scripts to obtain LM scores of each candidate.
+* `score_hyp_nbest.py`: rank candidates by scoring strings `[zh_a] sent_src [zh_m] sent_tgt [chron]`, without considering chronology information
+* `score_hyp_nbest_with_period.py`: time-aware ranking by scoring strings `[zh_a] sent_src [zh_m] sent_tgt [chron] time` for all possible values of `time`
+
+Example:
+Let `test.hyp5` be the output of `fairseq-generate` with `N=5` candidates per sentence.
+
+The following command reranks the candidates by considering source sentences (in `test.zh_a`) and the candidates.
+```
+python score_hyp_nbest.py test.hyp5 5 /path/to/test.zh_a test.hyp5.gpt2-rerank \
+        --pretrained_model /path/to/fine_tuned/gpt2_model/
+```
+The output file `test.hyp5.gpt2-rerank` will be a TSV like this:
+```
+3       -1.9268633127212524     -0.6304359436035156     子 胥 回 答 说 ： 大 王 不 喜 欢 ！
+3       -1.986321210861206      -0.4897662401199341     子 胥 说 ： 大 王 不 喜 欢 ！
+3       -2.1779110431671143     -0.50040602684021       伍 子 胥 说 ： 大 王 不 喜 欢 ！
+3       -2.3064706325531006     -0.6741451025009155     伍 子 胥 回 答 说 ： 大 王 不 喜 ！
+3       -2.3135294914245605     -0.5642138123512268     伍 子 胥 说 ： 大 王 不 喜 ！
+```
+The 2nd column is the GPT-2 LM score (normalized log probability) and the 3rd column is the original hypothesis score provided by `fairseq-generate`. Every `N` lines (with the same sentence id indicated by the 1st column) are sorted by the GPT-2 scores in decending order, so the first candidate will be selected after reranking.
+
+Similarly, the following command performs time-aware reranking.
+```
+python score_hyp_nbest_with_period.py test.hyp5.gpt2-rerank 5 /path/to/test.zh_a test.hyp5.gpt2-period-rerank \
+        --pretrained_model /path/to/fine_tuned/gpt2_model/
+```
+The output file `test.hyp5.gpt2-period-rerank` will be a TSV with all columns in `test.hyp5.gpt2-rerank` and an additional column inserted right after the sentence id column. This column contains three values indicating the GPT-2 LM scores when the source sentence and the translation candidate are associated with time period `pre-qin`, `han` and `song` respectively. These scores can be used for chronology inference and time-aware reranking. In the following example, since the highest time-aware LM score is `-1.7751`, the first translation candidate `子 胥 回 答 说 ： 大 王 不 喜 欢 ！` will be selected and the chronological period prediction will be `han`.
+```
+3       -1.8583,-1.7751,-1.8961 -1.9268633127212524     -0.6304359436035156     子 胥 回 答 说 ： 大 王 不 喜 欢 ！
+3       -1.8925,-1.8212,-1.9475 -1.986321210861206      -0.4897662401199341     子 胥 说 ： 大 王 不 喜 欢 ！
+3       -2.0852,-2.0016,-2.1322 -2.1779110431671143     -0.50040602684021       伍 子 胥 说 ： 大 王 不 喜 欢 ！
+3       -2.2085,-2.1246,-2.2645 -2.3064706325531006     -0.6741451025009155     伍 子 胥 回 答 说 ： 大 王 不 喜 ！
+3       -2.1959,-2.1210,-2.2644 -2.3135294914245605     -0.5642138123512268     伍 子 胥 说 ： 大 王 不 喜 ！
+```
